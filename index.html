@@ -25,7 +25,7 @@
         input { 
             flex: 1; 
             padding: 12px; 
-            border: 2px solid #FFB090; /* Match your card accent */
+            border: 2px solid #FFB090; 
             border-radius: 5px; 
             font-size: 1rem; 
             background: #ffffff;
@@ -33,7 +33,7 @@
         .task-card { 
             background: #fadace; margin-bottom: 12px; padding: 20px; border-radius: 8px; 
             display: flex; flex-direction: column; gap: 15px; border-left: 6px solid #FFB090;
-            box-shadow: 0 2px 4px box-shadow: 0 2px 4px rgba(93, 28, 106, 0.2);
+            box-shadow: 0 2px 4px rgba(93, 28, 106, 0.2); /* Fixed typo here */
             transition: all 0.3s ease;
         }
 
@@ -62,7 +62,7 @@
             font-size: 0.85rem; 
             text-transform: uppercase;
             letter-spacing: 1px;
-            transition: transform 0.1s active;
+            transition: transform 0.1s;
         }   
           
         button:active {
@@ -74,10 +74,10 @@
         /* Start/Stop Button Logic */
         .btn-toggle { 
             min-width: 110px; 
-            color: #FFF1D3; /* Matching your cream color for the text */
+            color: #FFF1D3; 
         }
-        .running { background: #5D1C6A; } /* Red for Stop */
-        .stopped { background: #CA5995; color: black; } /* Green for Start */
+        .running { background: #5D1C6A; } /* Purple for Stop */
+        .stopped { background: #CA5995; color: black; } /* Pink for Start */
         
         .btn-adjust { background: white; color: black; }
         .btn-del { background: white; color: #999; }
@@ -105,7 +105,8 @@
 </div>
 
 <script>
-    const STORAGE_KEY = 'workTasks_Pro_V1';
+    // Changed the storage key so it starts fresh with the new high-accuracy data structure
+    const STORAGE_KEY = 'workTasks_HighAccuracy_V1';
     let tasks = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
 
     const pIn = document.getElementById('pIn');
@@ -119,24 +120,36 @@
 
     function addTask() {
         const name = pIn.value.trim() || 'New Project';
-        tasks.push({ id: Date.now(), project: name, seconds: 0, running: false });
+        // Added lastMark to track exact computer time
+        tasks.push({ id: Date.now(), project: name, seconds: 0, running: false, lastMark: null });
         pIn.value = '';
         saveAndRender();
     }
 
-    // Suggestion 1: Only one timer at a time logic
     function toggle(id) {
         const targetTask = tasks.find(t => t.id === id);
         if (!targetTask) return;
 
-        const isStarting = !targetTask.running;
+        const now = Date.now();
 
-        if (isStarting) {
-            // Stop all other tasks first
-            tasks.forEach(t => t.running = false);
+        if (!targetTask.running) {
+            // STOP ALL OTHERS
+            tasks.forEach(t => {
+                if(t.running) {
+                    t.seconds += Math.floor((now - t.lastMark) / 1000);
+                }
+                t.running = false;
+                t.lastMark = null;
+            });
+            
+            // START THIS ONE
             targetTask.running = true;
+            targetTask.lastMark = now;
         } else {
+            // STOP THIS ONE
+            targetTask.seconds += Math.floor((now - targetTask.lastMark) / 1000);
             targetTask.running = false;
+            targetTask.lastMark = null;
         }
         
         saveAndRender();
@@ -164,24 +177,25 @@
         return `${h}:${m}:${sec}`;
     }
 
-    // Every second: update data and global UI
+    // High-Accuracy Loop
     setInterval(() => {
-        let total = 0;
+        let totalDisplaySeconds = 0;
         let anyRunning = false;
+        const now = Date.now();
         
         tasks.forEach(task => {
+            let currentSessionSeconds = 0;
             if (task.running) {
-                task.seconds++;
                 anyRunning = true;
+                currentSessionSeconds = Math.floor((now - task.lastMark) / 1000);
                 const el = document.getElementById(`time-${task.id}`);
-                if (el) el.innerText = formatTime(task.seconds);
+                if (el) el.innerText = formatTime(task.seconds + currentSessionSeconds);
             }
-            total += task.seconds;
+            totalDisplaySeconds += (task.seconds + currentSessionSeconds);
         });
 
-        grandTotalDisplay.innerText = formatTime(total);
+        grandTotalDisplay.innerText = formatTime(totalDisplaySeconds);
         
-        // Suggestion 3: Visual Active State for Header
         if (anyRunning) totalBox.classList.add('active');
         else totalBox.classList.remove('active');
 
@@ -193,7 +207,6 @@
         board.innerHTML = '';
         tasks.forEach(task => {
             const card = document.createElement('div');
-            // Suggestion 3: Active card class
             card.className = `task-card ${task.running ? 'active' : ''}`;
             card.innerHTML = `
                 <div class="card-top">
