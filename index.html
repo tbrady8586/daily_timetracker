@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Work Day Tracker</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: sans-serif; background: #FFF1D3; padding: 20px; }
+        .container { max-width: 650px; margin: 0 auto; }
+        
+        .total-box { 
+            background: #5D1C6A; color: #FFF1D3; padding: 20px; 
+            border-radius: 10px; text-align: center; margin-bottom: 20px;
+            transition: background 0.3s;
+        }
+        /* Pulse the total box slightly when anything is running */
+        .total-box.active { background: #CA5995; border-bottom: 4px solid #5D1C6A; }
+        .total-box h1 { margin: 5px 0; font-family: monospace; font-size: 2.5rem; }
+
+        .controls { 
+            background: white; padding: 20px; border-radius: 10px; 
+            display: flex; gap: 10px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); 
+        }
+        input { 
+            flex: 1; 
+            padding: 12px; 
+            border: 2px solid #FFB090; /* Match your card accent */
+            border-radius: 5px; 
+            font-size: 1rem; 
+            background: #ffffff;
+        }        
+        .task-card { 
+            background: #fadace; margin-bottom: 12px; padding: 20px; border-radius: 8px; 
+            display: flex; flex-direction: column; gap: 15px; border-left: 6px solid #FFB090;
+            box-shadow: 0 2px 4px box-shadow: 0 2px 4px rgba(93, 28, 106, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        /* Suggestion 3: Visual Active State */
+        .task-card.active { 
+            border-left-color: #fadace; 
+            background: #FFB090;
+            transform: scale(1.02);
+            box-shadow: 0 4px 12px rgba(39, 174, 96, 0.15);
+        }
+
+        .card-top { display: flex; justify-content: space-between; align-items: center; }
+        .project-name { font-weight: bold; font-size: 2rem; flex: 1; color: #5D1C6A; }
+        .timer { font-family: monospace; font-size: 2rem; font-weight: bold; color: #CA5995; }
+        
+        .card-bottom { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+        .adjust-btns { display: flex; gap: 5px; }
+        
+        button { 
+            font-family: 'Inter', sans-serif;
+            cursor: pointer; 
+            padding: 10px 15px; 
+            border: none; 
+            border-radius: 6px; 
+            font-weight: 900; 
+            font-size: 0.85rem; 
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: transform 0.1s active;
+        }   
+          
+        button:active {
+            transform: scale(0.95); /* Makes it feel like a real physical button click */
+        }
+
+        .btn-add { background: #5D1C6A; color: white; padding: 12px 20px; }
+        
+        /* Start/Stop Button Logic */
+        .btn-toggle { 
+            min-width: 110px; 
+            color: #FFF1D3; /* Matching your cream color for the text */
+        }
+        .running { background: #5D1C6A; } /* Red for Stop */
+        .stopped { background: #CA5995; color: black; } /* Green for Start */
+        
+        .btn-adjust { background: white; color: black; }
+        .btn-del { background: white; color: #999; }
+        .btn-del:hover { background: #fadbd8; color: #e74c3c; }
+
+        /* Subtle pulse for the timer text */
+        .active .timer { color: #5D1C6A; animation: blink 2s infinite; }
+        @keyframes blink { 50% { opacity: 0.7; } }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="total-box" id="totalBox">
+        <small>TOTAL TRACKED TIME</small>
+        <h1 id="grandTotal">00:00:00</h1>
+    </div>
+
+    <div class="controls">
+        <input type="text" id="pIn" placeholder="Enter Project Name..." autocomplete="off">
+        <button class="btn-add" id="addBtn">+ Add Project</button>
+    </div>
+
+    <div id="taskBoard"></div>
+</div>
+
+<script>
+    const STORAGE_KEY = 'workTasks_Pro_V1';
+    let tasks = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+
+    const pIn = document.getElementById('pIn');
+    const addBtn = document.getElementById('addBtn');
+    const board = document.getElementById('taskBoard');
+    const grandTotalDisplay = document.getElementById('grandTotal');
+    const totalBox = document.getElementById('totalBox');
+
+    addBtn.addEventListener('click', addTask);
+    pIn.addEventListener('keypress', (e) => { if (e.key === 'Enter') { e.preventDefault(); addTask(); } });
+
+    function addTask() {
+        const name = pIn.value.trim() || 'New Project';
+        tasks.push({ id: Date.now(), project: name, seconds: 0, running: false });
+        pIn.value = '';
+        saveAndRender();
+    }
+
+    // Suggestion 1: Only one timer at a time logic
+    function toggle(id) {
+        const targetTask = tasks.find(t => t.id === id);
+        if (!targetTask) return;
+
+        const isStarting = !targetTask.running;
+
+        if (isStarting) {
+            // Stop all other tasks first
+            tasks.forEach(t => t.running = false);
+            targetTask.running = true;
+        } else {
+            targetTask.running = false;
+        }
+        
+        saveAndRender();
+    }
+
+    function adjustTime(id, amount) {
+        const task = tasks.find(t => t.id === id);
+        if (task) {
+            task.seconds = Math.max(0, task.seconds + amount);
+            saveAndRender();
+        }
+    }
+
+    function remove(id) {
+        if (confirm("Delete this project?")) {
+            tasks = tasks.filter(t => t.id !== id);
+            saveAndRender();
+        }
+    }
+
+    function formatTime(s) {
+        const h = Math.floor(s / 3600).toString().padStart(2, '0');
+        const m = Math.floor((s % 3600) / 60).toString().padStart(2, '0');
+        const sec = (s % 60).toString().padStart(2, '0');
+        return `${h}:${m}:${sec}`;
+    }
+
+    // Every second: update data and global UI
+    setInterval(() => {
+        let total = 0;
+        let anyRunning = false;
+        
+        tasks.forEach(task => {
+            if (task.running) {
+                task.seconds++;
+                anyRunning = true;
+                const el = document.getElementById(`time-${task.id}`);
+                if (el) el.innerText = formatTime(task.seconds);
+            }
+            total += task.seconds;
+        });
+
+        grandTotalDisplay.innerText = formatTime(total);
+        
+        // Suggestion 3: Visual Active State for Header
+        if (anyRunning) totalBox.classList.add('active');
+        else totalBox.classList.remove('active');
+
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+    }, 1000);
+
+    function saveAndRender() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+        board.innerHTML = '';
+        tasks.forEach(task => {
+            const card = document.createElement('div');
+            // Suggestion 3: Active card class
+            card.className = `task-card ${task.running ? 'active' : ''}`;
+            card.innerHTML = `
+                <div class="card-top">
+                    <div class="project-name">${task.project}</div>
+                    <div class="timer" id="time-${task.id}">${formatTime(task.seconds)}</div>
+                </div>
+                <div class="card-bottom">
+                    <div class="adjust-btns">
+                        <button class="btn-adjust" onclick="adjustTime(${task.id}, 300)">+5m</button>
+                        <button class="btn-adjust" onclick="adjustTime(${task.id}, -300)">-5m</button>
+                    </div>
+                    <div>
+                        <button class="btn-toggle ${task.running ? 'running' : 'stopped'}" onclick="toggle(${task.id})">
+                            ${task.running ? 'Stop' : 'Start'}
+                        </button>
+                        <button class="btn-del" onclick="remove(${task.id})">🗑</button>
+                    </div>
+                </div>
+            `;
+            board.appendChild(card);
+        });
+    }
+
+    saveAndRender();
+</script>
+
+</body>
+</html>
