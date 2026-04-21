@@ -105,132 +105,136 @@
 </div>
 
 <script>
-    // Changed the storage key so it starts fresh with the new high-accuracy data structure
-    const STORAGE_KEY = 'workTasks_HighAccuracy_V1';
-    let tasks = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+    const STORAGE_KEY = 'workTasks_Pro_Final_V2';
+let tasks = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
 
-    const pIn = document.getElementById('pIn');
-    const addBtn = document.getElementById('addBtn');
-    const board = document.getElementById('taskBoard');
-    const grandTotalDisplay = document.getElementById('grandTotal');
-    const totalBox = document.getElementById('totalBox');
+const pIn = document.getElementById('pIn');
+const addBtn = document.getElementById('addBtn');
+const board = document.getElementById('taskBoard');
+const grandTotalDisplay = document.getElementById('grandTotal');
+const totalBox = document.getElementById('totalBox');
 
-    addBtn.addEventListener('click', addTask);
-    pIn.addEventListener('keypress', (e) => { if (e.key === 'Enter') { e.preventDefault(); addTask(); } });
+addBtn.addEventListener('click', addTask);
+pIn.addEventListener('keypress', (e) => { if (e.key === 'Enter') { e.preventDefault(); addTask(); } });
 
-    function addTask() {
-        const name = pIn.value.trim() || 'New Project';
-        // Added lastMark to track exact computer time
-        tasks.push({ id: Date.now(), project: name, seconds: 0, running: false, lastMark: null });
-        pIn.value = '';
-        saveAndRender();
-    }
-
-    function toggle(id) {
-        const targetTask = tasks.find(t => t.id === id);
-        if (!targetTask) return;
-
-        const now = Date.now();
-
-        if (!targetTask.running) {
-            // STOP ALL OTHERS
-            tasks.forEach(t => {
-                if(t.running) {
-                    t.seconds += Math.floor((now - t.lastMark) / 1000);
-                }
-                t.running = false;
-                t.lastMark = null;
-            });
-            
-            // START THIS ONE
-            targetTask.running = true;
-            targetTask.lastMark = now;
-        } else {
-            // STOP THIS ONE
-            targetTask.seconds += Math.floor((now - targetTask.lastMark) / 1000);
-            targetTask.running = false;
-            targetTask.lastMark = null;
-        }
-        
-        saveAndRender();
-    }
-
-    function adjustTime(id, amount) {
-        const task = tasks.find(t => t.id === id);
-        if (task) {
-            task.seconds = Math.max(0, task.seconds + amount);
-            saveAndRender();
-        }
-    }
-
-    function remove(id) {
-        if (confirm("Delete this project?")) {
-            tasks = tasks.filter(t => t.id !== id);
-            saveAndRender();
-        }
-    }
-
-    function formatTime(s) {
-        const h = Math.floor(s / 3600).toString().padStart(2, '0');
-        const m = Math.floor((s % 3600) / 60).toString().padStart(2, '0');
-        const sec = (s % 60).toString().padStart(2, '0');
-        return `${h}:${m}:${sec}`;
-    }
-
-    // High-Accuracy Loop
-    setInterval(() => {
-        let totalDisplaySeconds = 0;
-        let anyRunning = false;
-        const now = Date.now();
-        
-        tasks.forEach(task => {
-            let currentSessionSeconds = 0;
-            if (task.running) {
-                anyRunning = true;
-                currentSessionSeconds = Math.floor((now - task.lastMark) / 1000);
-                const el = document.getElementById(`time-${task.id}`);
-                if (el) el.innerText = formatTime(task.seconds + currentSessionSeconds);
-            }
-            totalDisplaySeconds += (task.seconds + currentSessionSeconds);
-        });
-
-        grandTotalDisplay.innerText = formatTime(totalDisplaySeconds);
-        
-        if (anyRunning) totalBox.classList.add('active');
-        else totalBox.classList.remove('active');
-
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
-    }, 1000);
-
-    function saveAndRender() {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
-        board.innerHTML = '';
-        tasks.forEach(task => {
-            const card = document.createElement('div');
-            card.className = `task-card ${task.running ? 'active' : ''}`;
-            card.innerHTML = `
-                <div class="card-top">
-                    <div class="project-name">${task.project}</div>
-                    <div class="timer" id="time-${task.id}">${formatTime(task.seconds)}</div>
-                </div>
-                <div class="card-bottom">
-                    <div class="adjust-btns">
-                        <button class="btn-adjust" onclick="adjustTime(${task.id}, 300)">+5m</button>
-                        <button class="btn-adjust" onclick="adjustTime(${task.id}, -300)">-5m</button>
-                    </div>
-                    <div>
-                        <button class="btn-toggle ${task.running ? 'running' : 'stopped'}" onclick="toggle(${task.id})">
-                            ${task.running ? 'Stop' : 'Start'}
-                        </button>
-                        <button class="btn-del" onclick="remove(${task.id})">🗑</button>
-                    </div>
-                </div>
-            `;
-            board.appendChild(card);
-        });
-    }
-
+function addTask() {
+    const name = pIn.value.trim() || 'New Project';
+    tasks.push({ 
+        id: Date.now(), 
+        project: name, 
+        seconds: 0, 
+        running: false,
+        startTime: null // We'll use this to track real-world time
+    });
+    pIn.value = '';
     saveAndRender();
+}
+
+function toggle(id) {
+    const now = Date.now();
+    tasks.forEach(t => {
+        if (t.id === id) {
+            if (!t.running) {
+                // STARTING: Record the exact moment we started
+                t.running = true;
+                t.startTime = now; 
+            } else {
+                // STOPPING: Add the elapsed time to the total and clear start point
+                const elapsed = Math.floor((now - t.startTime) / 1000);
+                t.seconds += elapsed;
+                t.running = false;
+                t.startTime = null;
+            }
+        } else if (t.running) {
+            // Suggestion 1: Auto-stop other tasks
+            const elapsed = Math.floor((now - t.startTime) / 1000);
+            t.seconds += elapsed;
+            t.running = false;
+            t.startTime = null;
+        }
+    });
+    saveAndRender();
+}
+
+function adjustTime(id, amount) {
+    const task = tasks.find(t => t.id === id);
+    if (task) {
+        task.seconds = Math.max(0, task.seconds + amount);
+        saveAndRender();
+    }
+}
+
+function remove(id) {
+    if (confirm("Delete this project?")) {
+        tasks = tasks.filter(t => t.id !== id);
+        saveAndRender();
+    }
+}
+
+function formatTime(s) {
+    const h = Math.floor(s / 3600).toString().padStart(2, '0');
+    const m = Math.floor((s % 3600) / 60).toString().padStart(2, '0');
+    const sec = (s % 60).toString().padStart(2, '0');
+    return `${h}:${m}:${sec}`;
+}
+
+// Every second: update visual display ONLY
+setInterval(() => {
+    let totalSeconds = 0;
+    let anyRunning = false;
+    const now = Date.now();
+    
+    tasks.forEach(task => {
+        let displaySeconds = task.seconds;
+        if (task.running) {
+            anyRunning = true;
+            // Calculate real-world seconds passed since button was clicked
+            const sessionSeconds = Math.floor((now - task.startTime) / 1000);
+            displaySeconds += sessionSeconds;
+            
+            const el = document.getElementById(`time-${task.id}`);
+            if (el) el.innerText = formatTime(displaySeconds);
+        }
+        totalSeconds += displaySeconds;
+    });
+
+    grandTotalDisplay.innerText = formatTime(totalSeconds);
+    
+    if (anyRunning) totalBox.classList.add('active');
+    else totalBox.classList.remove('active');
+
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+}, 1000);
+
+function saveAndRender() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+    board.innerHTML = '';
+    tasks.forEach(task => {
+        const card = document.createElement('div');
+        card.className = `task-card ${task.running ? 'active' : ''}`;
+        card.innerHTML = `
+            <div class="card-top">
+                <div class="project-name">${task.project}</div>
+                <div class="timer" id="time-${task.id}">${formatTime(task.seconds)}</div>
+            </div>
+            <div class="card-bottom">
+                <div class="adjust-btns">
+                    <button class="btn-adjust" onclick="adjustTime(${task.id}, 300)">+5m</button>
+                    <button class="btn-adjust" onclick="adjustTime(${task.id}, -300)">-5m</button>
+                </div>
+                <div>
+                    <button class="btn-toggle ${task.running ? 'running' : 'stopped'}" onclick="toggle(${task.id})">
+                        ${task.running ? 'Stop' : 'Start'}
+                    </button>
+                    <button class="btn-del" onclick="remove(${task.id})">🗑</button>
+                </div>
+            </div>
+        `;
+        board.appendChild(card);
+    });
+}
+
+saveAndRender();
 </script>
 
 </body>
