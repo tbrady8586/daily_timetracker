@@ -6,7 +6,7 @@
     <title>Work Day Tracker</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
-        /* Default Color Theme Variables */
+       
         :root {
             --bg-body: #FFF1D3;
             --bg-total: #5D1C6A;
@@ -38,7 +38,6 @@
             --btn-del-hover-text: #e74c3c;
         }
 
-        /* Black & White Theme */
         body.theme-bw {
             --bg-body: #f0f0f0;
             --bg-total: #333333;
@@ -70,7 +69,6 @@
             --btn-del-hover-text: #000000;
         }
 
-        /* Dark Mode Theme */
         body.theme-dark {
             --bg-body: #121212;
             --bg-total: #1e1e1e;
@@ -231,4 +229,197 @@
             <button class="btn-adjust" onclick="setTheme('bw')">B&W</button>
             <button class="btn-adjust" onclick="setTheme('dark')">Dark</button>
         </div>
-        <button class="btn-del" onclick="resetAllTim
+        <button class="btn-del" onclick="resetAllTimers()">Reset All Timers</button>
+    </div>
+
+    <div id="taskBoard"></div>
+</div>
+
+<script>
+const STORAGE_KEY = 'workTasks_Pro_Final_V2';
+const THEME_KEY = 'workTasks_Theme';
+
+// BULLETPROOF LOCAL STORAGE CHECK
+let tasks = [];
+try {
+    const savedData = localStorage.getItem(STORAGE_KEY);
+    if (savedData) {
+        const parsed = JSON.parse(savedData);
+        // Ensure the saved data is an array before using it
+        if (Array.isArray(parsed)) {
+            tasks = parsed;
+        }
+    }
+} catch (error) {
+    console.warn("Corrupted previous saved data. Starting fresh to prevent a crash.");
+    tasks = [];
+}
+
+const pIn = document.getElementById('pIn');
+const addBtn = document.getElementById('addBtn');
+const board = document.getElementById('taskBoard');
+const grandTotalDisplay = document.getElementById('grandTotal');
+const totalBox = document.getElementById('totalBox');
+
+// Load saved theme safely
+try {
+    const savedTheme = localStorage.getItem(THEME_KEY) || 'default';
+    setTheme(savedTheme);
+} catch (error) {
+    setTheme('default');
+}
+
+addBtn.addEventListener('click', addTask);
+pIn.addEventListener('keypress', (e) => { if (e.key === 'Enter') { e.preventDefault(); addTask(); } });
+
+function setTheme(themeName) {
+    if (themeName === 'default') {
+        document.body.className = '';
+    } else {
+        document.body.className = `theme-${themeName}`;
+    }
+    try {
+        localStorage.setItem(THEME_KEY, themeName);
+    } catch(e) {
+        // Ignored if local storage is blocked
+    }
+}
+
+function addTask() {
+    const name = pIn.value.trim() || 'New Project';
+    tasks.push({ 
+        id: Date.now(), 
+        project: name, 
+        seconds: 0, 
+        running: false,
+        startTime: null 
+    });
+    pIn.value = '';
+    saveAndRender();
+}
+
+function toggle(id) {
+    const now = Date.now();
+    tasks.forEach(t => {
+        if (t.id === id) {
+            if (!t.running) {
+                t.running = true;
+                t.startTime = now; 
+            } else {
+                const elapsed = Math.floor((now - t.startTime) / 1000);
+                t.seconds += elapsed;
+                t.running = false;
+                t.startTime = null;
+            }
+        } else if (t.running) {
+            const elapsed = Math.floor((now - t.startTime) / 1000);
+            t.seconds += elapsed;
+            t.running = false;
+            t.startTime = null;
+        }
+    });
+    saveAndRender();
+}
+
+function adjustTime(id, amount) {
+    const task = tasks.find(t => t.id === id);
+    if (task) {
+        task.seconds = Math.max(0, task.seconds + amount);
+        saveAndRender();
+    }
+}
+
+function remove(id) {
+    if (confirm("Delete this project?")) {
+        tasks = tasks.filter(t => t.id !== id);
+        saveAndRender();
+    }
+}
+
+function resetAllTimers() {
+    if (confirm("Are you sure you want to reset ALL timers back to zero?")) {
+        tasks = tasks.map(task => ({
+            ...task,
+            seconds: 0,
+            running: false,
+            startTime: null
+        }));
+        saveAndRender();
+    }
+}
+
+function formatTime(s) {
+    const h = Math.floor(s / 3600).toString().padStart(2, '0');
+    const m = Math.floor((s % 3600) / 60).toString().padStart(2, '0');
+    const sec = (s % 60).toString().padStart(2, '0');
+    return `${h}:${m}:${sec}`;
+}
+
+setInterval(() => {
+    let totalSeconds = 0;
+    let anyRunning = false;
+    const now = Date.now();
+    
+    tasks.forEach(task => {
+        let displaySeconds = task.seconds;
+        if (task.running) {
+            anyRunning = true;
+            const sessionSeconds = Math.floor((now - task.startTime) / 1000);
+            displaySeconds += sessionSeconds;
+            
+            const el = document.getElementById(`time-${task.id}`);
+            if (el) el.innerText = formatTime(displaySeconds);
+        }
+        totalSeconds += displaySeconds;
+    });
+
+    grandTotalDisplay.innerText = formatTime(totalSeconds);
+    
+    if (anyRunning) totalBox.classList.add('active');
+    else totalBox.classList.remove('active');
+
+    try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+    } catch(e) {
+        // Ignored
+    }
+}, 1000);
+
+function saveAndRender() {
+    try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+    } catch(e) {
+        // Ignored
+    }
+    
+    board.innerHTML = '';
+    tasks.forEach(task => {
+        const card = document.createElement('div');
+        card.className = `task-card ${task.running ? 'active' : ''}`;
+        card.innerHTML = `
+            <div class="card-top">
+                <div class="project-name">${task.project}</div>
+                <div class="timer" id="time-${task.id}">${formatTime(task.seconds)}</div>
+            </div>
+            <div class="card-bottom">
+                <div class="adjust-btns">
+                    <button class="btn-adjust" onclick="adjustTime(${task.id}, 300)">+5m</button>
+                    <button class="btn-adjust" onclick="adjustTime(${task.id}, -300)">-5m</button>
+                </div>
+                <div>
+                    <button class="btn-toggle ${task.running ? 'running' : 'stopped'}" onclick="toggle(${task.id})">
+                        ${task.running ? 'Stop' : 'Start'}
+                    </button>
+                    <button class="btn-del" onclick="remove(${task.id})">🗑</button>
+                </div>
+            </div>
+        `;
+        board.appendChild(card);
+    });
+}
+
+saveAndRender();
+</script>
+
+</body>
+</html>
