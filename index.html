@@ -39,35 +39,38 @@
         }
 
         body.theme-bw {
-            --bg-body: #f0f0f0;
-            --bg-total: #333333;
-            --text-total: #ffffff;
-            --bg-total-active: #666666;
-            --border-total-active: #000000;
-            --bg-controls: #ffffff;
-            --text-main: #000000;
-            --input-border: #999999;
-            --input-bg: #ffffff;
-            --card-bg: #e0e0e0;
-            --card-border: #999999;
-            --card-active-bg: #cccccc;
-            --card-active-border: #666666;
-            --project-color: #000000;
-            --timer-color: #333333;
-            --timer-active-color: #000000;
-            --btn-add-bg: #333333;
-            --btn-add-text: #ffffff;
-            --btn-start-bg: #cccccc;
-            --btn-start-text: #000000;
-            --btn-stop-bg: #333333;
-            --btn-stop-text: #ffffff;
-            --btn-adjust-bg: #ffffff;
-            --btn-adjust-text: #000000;
-            --btn-del-bg: #ffffff;
-            --btn-del-text: #666666;
-            --btn-del-hover-bg: #dddddd;
-            --btn-del-hover-text: #000000;
-        }
+    --bg-body: #ffffff;
+    --bg-total: #C0C0C0;
+    --text-total: #ffffff;
+    --bg-total-active: #919191;
+    --border-total-active: #000000;
+    --bg-controls: #C0C0C0;
+    --text-main: #000000;
+    --input-border: #000000;
+    --input-bg: #ffffff;
+    --card-bg: #C0C0C0;
+    --card-border: #444444;
+    --card-active-bg: #6D6D6D;
+    --card-active-border: #000000;
+    --project-color: #000000;
+    --timer-color: #ffffff;
+    --timer-active-color: #000000;
+    --btn-add-bg: #ffffff;
+    --btn-add-text: #000000;
+    --btn-start-bg: #ffffff;
+    --btn-start-text: #000000;
+    --btn-stop-bg: #000000;
+    --btn-stop-text: #ffffff;
+    --btn-adjust-bg: #ffffff;
+    --btn-adjust-text: #000000;
+    --btn-del-bg: #ffffff;
+    --btn-del-text: #C0C0C0;
+    --btn-del-hover-bg: #f44336;
+    --btn-del-hover-text: #000000;
+    --project-active-color: #000000;
+    --btn-theme-bg: #000000;
+    --btn-theme-text: #ffffff;
+}
 
         body.theme-dark {
             --bg-body: #000000;
@@ -98,8 +101,9 @@
             --btn-del-text: #C0C0C0;
             --btn-del-hover-bg: #f44336;
             --btn-del-hover-text: #ffffff;
-            --project-color:#000000;
             --project-active-color: #ffffff;
+            --btn-theme-bg: #ffffff;
+            --btn-theme-text: #000000;
         }
 
         body { 
@@ -147,6 +151,11 @@
             transition: all 0.3s;
         }        
 
+        .btn-theme {
+            background: var(--btn-theme-bg);
+            color: var(--btn-theme-text);
+        }
+        
         /* Global Actions Bar */
         .global-actions {
             display: flex;
@@ -229,9 +238,9 @@
 
     <div class="global-actions">
         <div class="theme-buttons">
-            <button class="btn-adjust" onclick="setTheme('default')">Color</button>
-            <button class="btn-adjust" onclick="setTheme('bw')">B&W</button>
-            <button class="btn-adjust" onclick="setTheme('dark')">Dark</button>
+            <button class="btn-theme" onclick="setTheme('default')">Color</button>
+            <button class="btn-theme" onclick="setTheme('bw')">B&W</button>
+            <button class="btn-theme" onclick="setTheme('dark')">Dark</button>
         </div>
         <button class="btn-del" onclick="resetAllTimers()">Reset All Timers</button>
     </div>
