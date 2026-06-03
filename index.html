@@ -70,34 +70,36 @@
         }
 
         body.theme-dark {
-            --bg-body: #121212;
-            --bg-total: #1e1e1e;
-            --text-total: #e0e0e0;
-            --bg-total-active: #333333;
-            --border-total-active: #555555;
-            --bg-controls: #1e1e1e;
-            --text-main: #e0e0e0;
-            --input-border: #444444;
-            --input-bg: #2a2a2a;
-            --card-bg: #2a2a2a;
+            --bg-body: #000000;
+            --bg-total: #C0C0C0;
+            --text-total: #000000;
+            --bg-total-active: #919191;
+            --border-total-active: #FFFFFF;
+            --bg-controls: #C0C0C0;
+            --text-main: #FFFFFF;
+            --input-border: #FFFFFF;
+            --input-bg: #000000;
+            --card-bg: #C0C0C0;
             --card-border: #444444;
-            --card-active-bg: #3a3a3a;
-            --card-active-border: #666666;
+            --card-active-bg: #6D6D6D;
+            --card-active-border: #FFFFFF;
             --project-color: #ffffff;
-            --timer-color: #82b1ff;
+            --timer-color: #000000;
             --timer-active-color: #ffffff;
-            --btn-add-bg: #82b1ff;
-            --btn-add-text: #000000;
-            --btn-start-bg: #4caf50;
+            --btn-add-bg: #000000;
+            --btn-add-text: #ffffff;
+            --btn-start-bg: #000000;
             --btn-start-text: #ffffff;
-            --btn-stop-bg: #f44336;
-            --btn-stop-text: #ffffff;
-            --btn-adjust-bg: #444444;
-            --btn-adjust-text: #e0e0e0;
-            --btn-del-bg: #444444;
-            --btn-del-text: #aaaaaa;
+            --btn-stop-bg: #ffffff;
+            --btn-stop-text: #000000;
+            --btn-adjust-bg: #000000;
+            --btn-adjust-text: #ffffff;
+            --btn-del-bg: #000000;
+            --btn-del-text: #C0C0C0;
             --btn-del-hover-bg: #f44336;
             --btn-del-hover-text: #ffffff;
+            --project-color:#000000;
+            --project-active-color: #ffffff;
         }
 
         body { 
@@ -206,6 +208,8 @@
         .btn-del { background: var(--btn-del-bg); color: var(--btn-del-text); }
         .btn-del:hover { background: var(--btn-del-hover-bg); color: var(--btn-del-hover-text); }
 
+        .active .project-name { color: var(--project-active-color); }
+        
         .active .timer { color: var(--timer-active-color); animation: blink 2s infinite; }
         @keyframes blink { 50% { opacity: 0.7; } }
     </style>
