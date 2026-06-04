@@ -240,13 +240,17 @@
     </div>
 
     <div class="global-actions">
-        <div class="theme-buttons">
-            <button class="btn-theme" onclick="setTheme('default')">Color</button>
-            <button class="btn-theme" onclick="setTheme('bw')">B&W</button>
-            <button class="btn-theme" onclick="setTheme('dark')">Dark</button>
-        </div>
-        <button class="btn-theme" onclick="resetAllTimers()">Reset All Timers</button>
+    <div class="theme-buttons">
+        <button class="btn-theme" onclick="setTheme('default')">Color</button>
+        <button class="btn-theme" onclick="setTheme('bw')">B&W</button>
+        <button class="btn-theme" onclick="setTheme('dark')">Dark</button>
     </div>
+    
+    <div class="theme-buttons"> 
+        <button class="btn-theme" onclick="resetAllTimers()">Reset All</button>
+        <button class="btn-theme" onclick="deleteAllTasks()">Delete All</button>
+    </div>
+</div>
 
     <div id="taskBoard"></div>
 </div>
