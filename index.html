@@ -159,7 +159,7 @@
             color: var(--btn-theme-text);
         }
         
-        /* Global Actions Bar */
+      
         .global-actions {
             display: flex;
             justify-content: space-between;
@@ -259,7 +259,7 @@
 const STORAGE_KEY = 'workTasks_Pro_Final_V2';
 const THEME_KEY = 'workTasks_Theme';
 
-// BULLETPROOF LOCAL STORAGE CHECK
+
 let tasks = [];
 try {
     const savedData = localStorage.getItem(STORAGE_KEY);
@@ -281,7 +281,7 @@ const board = document.getElementById('taskBoard');
 const grandTotalDisplay = document.getElementById('grandTotal');
 const totalBox = document.getElementById('totalBox');
 
-// Load saved theme safely
+
 try {
     const savedTheme = localStorage.getItem(THEME_KEY) || 'default';
     setTheme(savedTheme);
@@ -441,5 +441,12 @@ function saveAndRender() {
 saveAndRender();
 </script>
 
+function deleteAllTasks() {
+    if (confirm("Are you sure you want to permanently delete ALL projects?")) {
+        tasks = []; 
+        saveAndRender();
+    }
+}
+    
 </body>
 </html>
