@@ -5,8 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Work Day Tracker</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <!-- Adds localForage to handle IndexedDB storage cleanly -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
     <style>
-       
         :root {
             --bg-body: #FFF1D3;
             --bg-total: #5D1C6A;
@@ -42,38 +43,38 @@
         }
 
         body.theme-bw {
-    --bg-body: #ffffff;
-    --bg-total: #000000;
-    --text-total: #ffffff;
-    --bg-total-active: #6D6D6D;
-    --border-total-active: #000000;
-    --bg-controls: #919191;
-    --text-main: #000000;
-    --input-border: #000000;
-    --input-bg: #ffffff;
-    --card-bg: #000000;
-    --card-border: #444444;
-    --card-active-bg: #6D6D6D;
-    --card-active-border: #000000;
-    --project-color: #ffffff;
-    --timer-color: #ffffff;
-    --timer-active-color: #000000;
-    --btn-add-bg: #ffffff;
-    --btn-add-text: #000000;
-    --btn-start-bg: #ffffff;
-    --btn-start-text: #000000;
-    --btn-stop-bg: #000000;
-    --btn-stop-text: #ffffff;
-    --btn-adjust-bg: #ffffff;
-    --btn-adjust-text: #000000;
-    --btn-del-bg: #ffffff;
-    --btn-del-text: #C0C0C0;
-    --btn-del-hover-bg: #f44336;
-    --btn-del-hover-text: #000000;
-    --project-active-color: #000000;
-    --btn-theme-bg: #000000;
-    --btn-theme-text: #ffffff;
-}
+            --bg-body: #ffffff;
+            --bg-total: #000000;
+            --text-total: #ffffff;
+            --bg-total-active: #6D6D6D;
+            --border-total-active: #000000;
+            --bg-controls: #919191;
+            --text-main: #000000;
+            --input-border: #000000;
+            --input-bg: #ffffff;
+            --card-bg: #000000;
+            --card-border: #444444;
+            --card-active-bg: #6D6D6D;
+            --card-active-border: #000000;
+            --project-color: #ffffff;
+            --timer-color: #ffffff;
+            --timer-active-color: #000000;
+            --btn-add-bg: #ffffff;
+            --btn-add-text: #000000;
+            --btn-start-bg: #ffffff;
+            --btn-start-text: #000000;
+            --btn-stop-bg: #000000;
+            --btn-stop-text: #ffffff;
+            --btn-adjust-bg: #ffffff;
+            --btn-adjust-text: #000000;
+            --btn-del-bg: #ffffff;
+            --btn-del-text: #C0C0C0;
+            --btn-del-hover-bg: #f44336;
+            --btn-del-hover-text: #000000;
+            --project-active-color: #000000;
+            --btn-theme-bg: #000000;
+            --btn-theme-text: #ffffff;
+        }
 
         body.theme-dark {
             --bg-body: #000000;
@@ -159,7 +160,6 @@
             color: var(--btn-theme-text);
         }
         
-      
         .global-actions {
             display: flex;
             justify-content: space-between;
@@ -239,17 +239,17 @@
     </div>
 
     <div class="global-actions">
-    <div class="theme-buttons">
-        <button class="btn-theme" onclick="setTheme('default')">Color</button>
-        <button class="btn-theme" onclick="setTheme('bw')">B&W</button>
-        <button class="btn-theme" onclick="setTheme('dark')">Dark</button>
+        <div class="theme-buttons">
+            <button class="btn-theme" onclick="setTheme('default')">Color</button>
+            <button class="btn-theme" onclick="setTheme('bw')">B&W</button>
+            <button class="btn-theme" onclick="setTheme('dark')">Dark</button>
+        </div>
+        
+        <div class="theme-buttons"> 
+            <button class="btn-theme" onclick="resetAllTimers()">Reset All</button>
+            <button class="btn-theme" onclick="deleteAllTasks()">Delete All</button>
+        </div>
     </div>
-    
-    <div class="theme-buttons"> 
-        <button class="btn-theme" onclick="resetAllTimers()">Reset All</button>
-        <button class="btn-theme" onclick="deleteAllTasks()">Delete All</button>
-    </div>
-</div>
 
     <div id="taskBoard"></div>
 </div>
@@ -258,21 +258,14 @@
 const STORAGE_KEY = 'workTasks_Pro_Final_V2';
 const THEME_KEY = 'workTasks_Theme';
 
+// Configure localForage to use IndexedDB explicitly
+localforage.config({
+    driver: localforage.INDEXEDDB,
+    name: 'WorkDayTracker',
+    storeName: 'tasks_store'
+});
 
 let tasks = [];
-try {
-    const savedData = localStorage.getItem(STORAGE_KEY);
-    if (savedData) {
-        const parsed = JSON.parse(savedData);
-        // Ensure the saved data is an array before using it
-        if (Array.isArray(parsed)) {
-            tasks = parsed;
-        }
-    }
-} catch (error) {
-    console.warn("Corrupted previous saved data. Starting fresh to prevent a crash.");
-    tasks = [];
-}
 
 const pIn = document.getElementById('pIn');
 const addBtn = document.getElementById('addBtn');
@@ -280,27 +273,55 @@ const board = document.getElementById('taskBoard');
 const grandTotalDisplay = document.getElementById('grandTotal');
 const totalBox = document.getElementById('totalBox');
 
+// Request Persistent Storage from the Browser
+async function makeStoragePersistent() {
+    if (navigator.storage && navigator.storage.persist) {
+        const isPersisted = await navigator.storage.persist();
+        console.log(`Persistent IndexedDB storage granted: ${isPersisted}`);
+    }
+}
 
-try {
-    const savedTheme = localStorage.getItem(THEME_KEY) || 'default';
-    setTheme(savedTheme);
-} catch (error) {
-    setTheme('default');
+// Load data from IndexedDB on startup (with automatic localStorage migration)
+async function initApp() {
+    await makeStoragePersistent();
+    try {
+        const savedTheme = await localforage.getItem(THEME_KEY);
+        setTheme(savedTheme || 'default');
+        
+        // 1. Check if they have data in the new IndexedDB system
+        let savedData = await localforage.getItem(STORAGE_KEY);
+        
+        // 2. MIGRATION: If IndexedDB is empty, check if they have old localStorage data
+        if (!savedData && localStorage.getItem(STORAGE_KEY)) {
+            console.log("Migrating old localStorage data to IndexedDB...");
+            savedData = JSON.parse(localStorage.getItem(STORAGE_KEY));
+            // Save it into IndexedDB so it's upgraded permanently
+            await localforage.setItem(STORAGE_KEY, savedData);
+        }
+
+        if (savedData && Array.isArray(savedData)) {
+            tasks = savedData;
+        }
+    } catch (error) {
+        console.warn("Could not load IndexedDB data. Starting clean array.");
+        tasks = [];
+    }
+    renderBoard();
 }
 
 addBtn.addEventListener('click', addTask);
 pIn.addEventListener('keypress', (e) => { if (e.key === 'Enter') { e.preventDefault(); addTask(); } });
 
-function setTheme(themeName) {
+async function setTheme(themeName) {
     if (themeName === 'default') {
         document.body.className = '';
     } else {
         document.body.className = `theme-${themeName}`;
     }
     try {
-        localStorage.setItem(THEME_KEY, themeName);
+        await localforage.setItem(THEME_KEY, themeName);
     } catch(e) {
-        // Ignored if local storage is blocked
+        // Ignore if storage fails
     }
 }
 
@@ -404,20 +425,18 @@ setInterval(() => {
     if (anyRunning) totalBox.classList.add('active');
     else totalBox.classList.remove('active');
 
-    try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
-    } catch(e) {
-        // Ignored
-    }
+    // Background auto-save to IndexedDB every second
+    localforage.setItem(STORAGE_KEY, tasks).catch(() => {});
 }, 1000);
 
+// Saves to IndexedDB and updates the HTML
 function saveAndRender() {
-    try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
-    } catch(e) {
-        // Ignored
-    }
-    
+    localforage.setItem(STORAGE_KEY, tasks).catch(() => {});
+    renderBoard();
+}
+
+// Separated rendering logic to handle async storage cleanly
+function renderBoard() {
     board.innerHTML = '';
     tasks.forEach(task => {
         const card = document.createElement('div');
@@ -444,7 +463,8 @@ function saveAndRender() {
     });
 }
 
-saveAndRender();
+// Start the app
+initApp();
 </script>
     
 </body>
